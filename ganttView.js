@@ -68,7 +68,7 @@ behavior: { // 整体配置， 如果整体设置不能拖拽、改变大小，�
             showWeekends: true,
             cellWidth: 40,
             cellHeight: 30,
-            vtHeaderWidth: 200,
+            vtHeaderWidth: 280,
             data: [],
             dataUrl: null,
             behavior: {
@@ -93,10 +93,12 @@ behavior: { // 整体配置， 如果整体设置不能拖拽、改变大小，�
 		function build() {
 			for(var i = 0; i < opts.data.length; i++) {
 			    for(var j = 0; j < opts.data[i].series.length; j++) {
-			        var serie = opts.data[i].series[j];
-			        if (!!serie.start && !!serie.end) {
-			            serie.start = new Date(serie.start);
-			            serie.end = new Date(serie.end);
+			        for(var k=0;k<opts.data[i].series[j].series.length;k++){
+                        var serie = opts.data[i].series[j].series[k];
+                        if (!!serie.start && !!serie.end) {
+                            serie.start = new Date(serie.start);
+                            serie.end = new Date(serie.end);
+                        }
                     }
                 }
             }
@@ -143,8 +145,10 @@ behavior: { // 整体配置， 如果整体设置不能拖拽、改变大小，�
             });
 			
             var dates = getDates(opts.start, opts.end);
+            //添加左边的表格标题
             addHzHeader(slideDiv, dates, opts.cellWidth,opts.showWeekends);
             addGrid(slideDiv, opts.data, dates, opts.cellWidth, opts.cellHeight, opts.showWeekends);
+            //添加右边的空行
             addBlockContainers(slideDiv, opts.data, opts.cellHeight);
             addBlocks(slideDiv, opts.data, opts.cellWidth, opts.start, opts.cellHeight);
             div.append(slideDiv);
@@ -183,38 +187,59 @@ behavior: { // 整体配置， 如果整体设置不能拖拽、改变大小，�
             headerTitleDiv.append(jQuery("<div>", {
                 "class": "ganttview-vtheader-title-name",
                 "css": {"height": "100%", "line-height": cellHeight * 2 + 1 + "px", "width": "80px"}
-            }).append("名称"));
+            }).append("工厂"));
             headerTitleDiv.append(jQuery("<div>", {
                 "class": "ganttview-vtheader-title-name",
-                "css": {"height": "100%", "line-height": cellHeight * 2 + 1 + "px", "width": "calc(100% - 81px)"}
-            }).append("任务"));
+                "css": {"height": "100%", "line-height": cellHeight * 2 + 1 + "px", "width": "80px"}
+            }).append("产品类别"));
+            headerTitleDiv.append(jQuery("<div>", {
+                "class": "ganttview-vtheader-title-name",
+                "css": {"height": "100%", "line-height": cellHeight * 2 + 1 + "px", "width": "calc(100% - 162px)"}
+            }).append("生产线"));
 
             headerDiv.append(headerTitleDiv);
             for (var i = 0; i < data.length; i++) {
                 if (!data[i].series || data[i].series.length === 0) { // 没有任务则加一条空的任务
                     data[i].series = [{id: null, name: '暂无任务', _empty: true}];
                 }
+
+                //初始化一级目录
+                var itemCount = 0;
+                for(var j=0;j<data[i].series.length;j++){
+                    itemCount+=data[i].series[j].series.length;
+                }
                 var itemDiv = jQuery("<div>", {
                     "class": "ganttview-vtheader-item",
-                    "css": { "height": (data[i].series.length * cellHeight) + "px" }
+                    "css": { "height": (itemCount * cellHeight) + "px" }
                 });
                 itemDiv.append(jQuery("<div>", {
                     "class": "ganttview-vtheader-item-name",
-                    "css": { "height": (data[i].series.length * cellHeight) + "px", "line-height": (data[i].series.length * cellHeight - 6) + "px" }
+                    "css": { "height": (itemCount * cellHeight) + "px", "line-height": (itemCount * cellHeight - 6) + "px" }
                 }).append(data[i].name));
-                var seriesDiv = jQuery("<div>", { "class": "ganttview-vtheader-series" });
+                //初始化二级目录
+                var seriesDiv0 = jQuery("<div>", { "class": "ganttview-vtheader-series","width": "80px" });
                 for (var j = 0; j < data[i].series.length; j++) {
-                    seriesDiv.append(jQuery("<div>", {
+                    var subItemCount = data[i].series[j].series.length;
+                    seriesDiv0.append(jQuery("<div>", {
                         "class": "ganttview-vtheader-series-name",
-                        "css": { "height": cellHeight + "px", "line-height": cellHeight - 6 + "px" }
-                    })
-                        .append(data[i].series[j].name));
+                        "css": { "height": subItemCount*cellHeight + "px", "line-height": subItemCount*cellHeight - 6 + "px" }
+                    }).append(data[i].series[j].name));
                 }
+
+                var seriesDiv = jQuery("<div>", { "class": "ganttview-vtheader-series" });
+                for (var n = 0; n < data[i].series.length; n++) {
+                    for(var m = 0;m < data[i].series[n].series.length; m++)
+                    {
+                        seriesDiv.append(jQuery("<div>", {
+                            "class": "ganttview-vtheader-series-name",
+                            "css": { "height": cellHeight + "px", "line-height": cellHeight - 6 + "px" }
+                        }).append(data[i].series[n].series[m].name));
+                    }
+                }
+                itemDiv.append(seriesDiv0);
                 itemDiv.append(seriesDiv);
                 headerDiv.append(itemDiv);
-
             }
-
             div.append(headerDiv);
         }
 
@@ -272,51 +297,58 @@ behavior: { // 整体配置， 如果整体设置不能拖拽、改变大小，�
             gridDiv.css("width", w + "px");
             for (var i = 0; i < data.length; i++) {
                 for (var j = 0; j < data[i].series.length; j++) {
-                	var cloneRowDiv = rowDiv.clone();
-                    cloneRowDiv.droppable({
-                        accept: '.task',
-                        hoverClass: "gantt-drag-hover",
-                        drop: function (e, ui) {
-                            var task = ui.helper.data("task");
-                        	var lineCount = gridDiv.children(".ganttview-grid-row").index(jQuery(this))+1;
-                            var count = 0;
-                            for(var i = 0; i < ganttOpts.data.length; i ++) {
-                                for(var j = 0; j < ganttOpts.data[i].series.length; j ++) {
-                                    count ++;
+                    for (var k = 0; k < data[i].series[j].series.length; k++) {
+                        var cloneRowDiv = rowDiv.clone();
+                        cloneRowDiv.droppable({
+                            accept: '.task',
+                            hoverClass: "gantt-drag-hover",
+                            drop: function (e, ui) {
+                                var task = ui.helper.data("task");
+                                var lineCount = gridDiv.children(".ganttview-grid-row").index(jQuery(this)) + 1;
+                                var count = 0;
+                                for (var i = 0; i < ganttOpts.data.length; i++) {
+                                    for (var j = 0; j < ganttOpts.data[i].series.length; j++) {
+                                        for (var k = 0; k < ganttOpts.data[i].series[j].series.length; k++) {
+                                            count++;
+                                            if (count === lineCount) {
+                                                console.log(task);
+                                                task.start = new Date(task.start);
+                                                task.end = new Date(task.end);
+                                                ui.helper.remove();
+                                                var series = ganttOpts.data[i].series[j].series.filter(function (value) {
+                                                    return !value._empty;
+                                                });
+                                                series.push(task);
+                                                ganttOpts.data[i].series[j].series = series;
+                                                build(ganttOpts);
+                                                break;
+                                            }
+                                        }
+                                    }
                                     if (count === lineCount) {
-                                        console.log(task);
-                                        task.start = new Date(task.start);
-                                        task.end = new Date(task.end);
-                                        ui.helper.remove();
-                                        var series = ganttOpts.data[i].series.filter(function (value) {
-                                            return !value._empty;
-                                        } );
-                                        series.push(task);
-                                        ganttOpts.data[i].series = series;
-                                        build(ganttOpts);
                                         break;
                                     }
                                 }
-                                if (count === lineCount) {
-                                    break;
-                                }
                             }
-                        }
-                    });
-                    gridDiv.append(cloneRowDiv);
+                        });
+                        gridDiv.append(cloneRowDiv);
+                    }
                 }
             }
             div.append(gridDiv);
         }
 
+        //好像是添加空行站位用的
         function addBlockContainers(div, data, cellHeight) {
             var blocksDiv = jQuery("<div>", { "class": "ganttview-blocks" });
             for (var i = 0; i < data.length; i++) {
                 for (var j = 0; j < data[i].series.length; j++) {
-                    blocksDiv.append(jQuery("<div>", {
-                        "class": "ganttview-block-container",
-                        "css": {"height": cellHeight - 8 + "px"}
-                    }));
+                    for(var k=0;k<data[i].series[j].series.length;k++){
+                        blocksDiv.append(jQuery("<div>", {
+                            "class": "ganttview-block-container",
+                            "css": {"height": cellHeight - 8 + "px"}
+                        }));
+                    }
                 }
             }
             div.append(blocksDiv);
@@ -327,32 +359,33 @@ behavior: { // 整体配置， 如果整体设置不能拖拽、改变大小，�
             var rowIdx = 0;
             for (var i = 0; i < data.length; i++) {
                 for (var j = 0; j < data[i].series.length; j++) {
-                    var series = data[i].series[j];
-                    var size = 0;
-                    if (!series._empty) {
-                        size = DateUtils.daysBetween(series.start, series.end) + 1;
-
-                        var offset = DateUtils.daysBetween(start, series.start);
-                        var block = jQuery("<div>", {
-                            "class": "ganttview-block",
-                            "title": series.name + "： " + size + " 天",
-                            "css": {
-                                "width": ((size * cellWidth) - 8) + "px",
-                                "height": cellHeight - 8 + "px",
-                                "margin-left": ((offset * cellWidth) + 4) + "px"
+                    for (var k = 0; k < data[i].series[j].series.length; k++) {
+                        var series = data[i].series[j].series[k];
+                        var size = 0;
+                        if (!series._empty) {
+                            size = DateUtils.daysBetween(series.start, series.end) + 1;
+                            var offset = DateUtils.daysBetween(start, series.start);
+                            var block = jQuery("<div>", {
+                                "class": "ganttview-block",
+                                "title": series.name + "： " + size + " 天",
+                                "css": {
+                                    "width": ((size * cellWidth) - 8) + "px",
+                                    "height": cellHeight - 8 + "px",
+                                    "margin-left": ((offset * cellWidth) + 4) + "px"
+                                }
+                            });
+                            addBlockData(block, data[i], series);
+                            if (!!data[i].series[j].series[k].options && data[i].series[j].series[k].options.color) {
+                                block.css("background-color", data[i].series[j].series[k].options.color);
                             }
-                        });
-                        addBlockData(block, data[i], series);
-                        if (!!data[i].series[j].options && data[i].series[j].options.color) {
-                            block.css("background-color", data[i].series[j].options.color);
+                            block.append(jQuery("<div>", {
+                                "class": "ganttview-block-text",
+                                "css": {"height": cellHeight - 8 + "px", "line-height": cellHeight - 8 + "px"}
+                            }).text(size + "天"));
+                            jQuery(rows[rowIdx]).append(block);
                         }
-                        block.append(jQuery("<div>", {
-                            "class": "ganttview-block-text",
-                            "css": {"height": cellHeight - 8 + "px", "line-height": cellHeight - 8 + "px"}
-                        }).text(size + "天"));
-                        jQuery(rows[rowIdx]).append(block);
+                        rowIdx = rowIdx + 1;
                     }
-                    rowIdx = rowIdx + 1;
                 }
             }
         }
@@ -523,15 +556,24 @@ behavior: { // 整体配置， 如果整体设置不能拖拽、改变大小，�
 			var maxEnd = new Date();
 			for (var i = 0; i < data.length; i++) {
 				for (var j = 0; j < data[i].series.length; j++) {
-					if (!data[i].series[j].start || !data[i].series[j].end){
-						continue;
-					}
-                    // series.start = new Date()
-					var start = new Date(data[i].series[j].start);
-					var end = new Date(data[i].series[j].end);
-					if (i == 0 && j == 0) { minStart = new Date(start); maxEnd = new Date(end); }
-					if (minStart.getTime() > start.getTime()) { minStart = new Date(start); }
-					if (maxEnd.getTime() < end.getTime()) { maxEnd = new Date(end); }
+                    for (var k = 0; k < data[i].series[j].series.length; k++) {
+                        if (!data[i].series[j].series[k].start || !data[i].series[j].series[k].end) {
+                            continue;
+                        }
+                        // series.start = new Date()
+                        var start = new Date(data[i].series[j].series[k].start);
+                        var end = new Date(data[i].series[j].series[k].end);
+                        if (i == 0 && j == 0 && k==0) {
+                            minStart = new Date(start);
+                            maxEnd = new Date(end);
+                        }
+                        if (minStart.getTime() > start.getTime()) {
+                            minStart = new Date(start);
+                        }
+                        if (maxEnd.getTime() < end.getTime()) {
+                            maxEnd = new Date(end);
+                        }
+                    }
 				}
 			}
 			if (DateUtils.daysBetween(minStart, maxEnd) < minDays) {
@@ -539,6 +581,18 @@ behavior: { // 整体配置， 如果整体设置不能拖拽、改变大小，�
 			}
 			
 			return [minStart, maxEnd];
-		}
+		},
+        //通过date获取周一~周日
+		getWeekDay(date){
+            var weekday=new Array(7)
+            weekday[0]="周日";
+            weekday[1]="周一";
+            weekday[2]="周二";
+            weekday[3]="周三";
+            weekday[4]="周四";
+            weekday[5]="周五";
+            weekday[6]="周六";
+            return weekday[date.getDay()];
+        }
     };
 })(jQuery);

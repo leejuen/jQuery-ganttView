@@ -80,12 +80,13 @@ div.ganttview-vtheader-item-name {
 }
 
 div.ganttview-vtheader-series {
-	width: calc(100% - 80px);
+	width: calc(100% - 162px);
 }
 div.ganttview-vtheader-series-name {
 	box-sizing: border-box;
 	width: 100%;
 	border-top: 1px solid #d0d0d0;
+	border-left: 1px solid #d0d0d0;
 	text-align: center;
 	padding: 3px;
 }
